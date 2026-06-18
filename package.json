@@ -1,0 +1,13 @@
+{
+  "name": "appsociety",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.8"
+  }
+}
