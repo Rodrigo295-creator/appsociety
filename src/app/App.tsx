@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ImageWithFallback } from "@/app/components/figma/ImageWithFallback";
-import logoImg from "@/imports/Captura_de_Tela_2026-06-18_a_s_12.40.22.png";
+import { Logo } from "@/app/components/Logo";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, Radar, PolarGrid, PolarAngleAxis,
@@ -39,7 +38,9 @@ import {
   ChevronLeft,
   Swords,
   LayoutGrid,
+  Languages,
 } from "lucide-react";
+import { useLocale, useT, positionKey, matchStatusKey } from "@/i18n";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -87,13 +88,13 @@ interface AvaliacaoJogador {
   data: string;
 }
 
-const ATRIBUTOS: { key: AtributoKey; label: string }[] = [
-  { key: "chute",      label: "Chute"      },
-  { key: "passe",      label: "Passe"      },
-  { key: "velocidade", label: "Velocidade" },
-  { key: "drible",     label: "Drible"     },
-  { key: "defesa",     label: "Defesa"     },
-  { key: "fisico",     label: "Físico"     },
+const ATRIBUTOS: { key: AtributoKey; labelKey: string }[] = [
+  { key: "chute",      labelKey: "attr.chute"      },
+  { key: "passe",      labelKey: "attr.passe"      },
+  { key: "velocidade", labelKey: "attr.velocidade" },
+  { key: "drible",     labelKey: "attr.drible"     },
+  { key: "defesa",     labelKey: "attr.defesa"     },
+  { key: "fisico",     labelKey: "attr.fisico"     },
 ];
 
 // Weights per position — attrs absent or 0 are ignored in avg
@@ -126,14 +127,14 @@ function getAvgAtributos(jogadorId: number, avaliacoes: AvaliacaoJogador[]): Atr
 
 // ── Goalkeeper-specific ──────────────────────────────────────────────────
 
-const ATRIBUTOS_GK: { key: AtributoGKKey; label: string }[] = [
-  { key: "reflexo",        label: "Reflexo"       },
-  { key: "manejo",         label: "Manejo"        },
-  { key: "posicionamento", label: "Posicion."     },
-  { key: "agilidade",      label: "Agilidade"     },
-  { key: "mergulho",       label: "Mergulho"      },
-  { key: "distribuicao",   label: "Distribuição"  },
-  { key: "chute_gk",       label: "Chute / TK"    },
+const ATRIBUTOS_GK: { key: AtributoGKKey; labelKey: string }[] = [
+  { key: "reflexo",        labelKey: "attr.gk.reflexo"        },
+  { key: "manejo",         labelKey: "attr.gk.manejo"         },
+  { key: "posicionamento", labelKey: "attr.gk.posicionamento" },
+  { key: "agilidade",      labelKey: "attr.gk.agilidade"      },
+  { key: "mergulho",       labelKey: "attr.gk.mergulho"       },
+  { key: "distribuicao",   labelKey: "attr.gk.distribuicao"   },
+  { key: "chute_gk",       labelKey: "attr.gk.chute"          },
 ];
 
 const ATTR_COLORS_GK: Record<AtributoGKKey, string> = {
@@ -203,18 +204,18 @@ interface Torneio {
 // ─── Data ──────────────────────────────────────────────────────────────────
 
 const revenueData = [
-  { mes: "Jan", receita: 8400, reservas: 42 },
-  { mes: "Fev", receita: 9200, reservas: 48 },
-  { mes: "Mar", receita: 11800, reservas: 61 },
-  { mes: "Abr", receita: 10500, reservas: 55 },
-  { mes: "Mai", receita: 13200, reservas: 68 },
-  { mes: "Jun", receita: 14800, reservas: 74 },
-  { mes: "Jul", receita: 12900, reservas: 66 },
-  { mes: "Ago", receita: 15600, reservas: 80 },
-  { mes: "Set", receita: 17200, reservas: 89 },
-  { mes: "Out", receita: 16400, reservas: 84 },
-  { mes: "Nov", receita: 18900, reservas: 97 },
-  { mes: "Dez", receita: 21300, reservas: 109 },
+  { mesKey: "month.jan", receita: 8400, reservas: 42 },
+  { mesKey: "month.feb", receita: 9200, reservas: 48 },
+  { mesKey: "month.mar", receita: 11800, reservas: 61 },
+  { mesKey: "month.apr", receita: 10500, reservas: 55 },
+  { mesKey: "month.may", receita: 13200, reservas: 68 },
+  { mesKey: "month.jun", receita: 14800, reservas: 74 },
+  { mesKey: "month.jul", receita: 12900, reservas: 66 },
+  { mesKey: "month.aug", receita: 15600, reservas: 80 },
+  { mesKey: "month.sep", receita: 17200, reservas: 89 },
+  { mesKey: "month.oct", receita: 16400, reservas: 84 },
+  { mesKey: "month.nov", receita: 18900, reservas: 97 },
+  { mesKey: "month.dec", receita: 21300, reservas: 109 },
 ];
 
 const jogadores = [
@@ -234,10 +235,10 @@ const partidas = [
 ];
 
 const statsCards = [
-  { label: "Receita Mensal", value: 21300, prefix: "R$", suffix: "", trend: +12.4, icon: TrendingUp, color: "text-primary" },
-  { label: "Reservas Ativas", value: 109, prefix: "", suffix: "", trend: +8.7, icon: Calendar, color: "text-[#00B4D4]" },
-  { label: "Jogadores Ativos", value: 348, prefix: "", suffix: "", trend: +5.2, icon: Users, color: "text-[#00B4D4]" },
-  { label: "Avaliação Média", value: 8.6, prefix: "", suffix: "/10", trend: +0.3, icon: Star, color: "text-accent" },
+  { labelKey: "dash.revenue", value: 21300, prefix: "R$", suffix: "", trend: +12.4, icon: TrendingUp, color: "text-primary" },
+  { labelKey: "dash.activeBookings", value: 109, prefix: "", suffix: "", trend: +8.7, icon: Calendar, color: "text-[#00B4D4]" },
+  { labelKey: "dash.activePlayers", value: 348, prefix: "", suffix: "", trend: +5.2, icon: Users, color: "text-[#00B4D4]" },
+  { labelKey: "dash.avgRating", value: 8.6, prefix: "", suffix: "/10", trend: +0.3, icon: Star, color: "text-accent" },
 ];
 
 const CORES_TIME = [
@@ -382,6 +383,8 @@ function AnimatedCounter({ target, prefix = "", suffix = "", decimals = 0 }: {
 }) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
+  const { locale } = useLocale();
+  const numberLocale = locale === "en" ? "en-US" : "pt-BR";
 
   useEffect(() => {
     const duration = 1400;
@@ -402,7 +405,7 @@ function AnimatedCounter({ target, prefix = "", suffix = "", decimals = 0 }: {
 
   const formatted = decimals > 0
     ? count.toFixed(decimals)
-    : Math.floor(count).toLocaleString("pt-BR");
+    : Math.floor(count).toLocaleString(numberLocale);
 
   return <span ref={ref}>{prefix}{formatted}{suffix}</span>;
 }
@@ -410,6 +413,9 @@ function AnimatedCounter({ target, prefix = "", suffix = "", decimals = 0 }: {
 // ─── Custom Tooltip ────────────────────────────────────────────────────────
 
 function CustomTooltip({ active, payload, label }: any) {
+  const t = useT();
+  const { locale } = useLocale();
+  const numberLocale = locale === "en" ? "en-US" : "pt-BR";
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-card border border-border rounded-lg px-4 py-3 shadow-2xl">
@@ -417,8 +423,8 @@ function CustomTooltip({ active, payload, label }: any) {
       {payload.map((p: any, i: number) => (
         <p key={i} className="text-sm font-medium" style={{ color: p.color }}>
           {p.name === "receita"
-            ? `R$ ${p.value.toLocaleString("pt-BR")}`
-            : `${p.value} reservas`}
+            ? `R$ ${p.value.toLocaleString(numberLocale)}`
+            : t("dash.tooltip.bookings", { n: p.value })}
         </p>
       ))}
     </div>
@@ -428,6 +434,7 @@ function CustomTooltip({ active, payload, label }: any) {
 // ─── Status Badges ─────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
+  const t = useT();
   const map: Record<string, string> = {
     "ao vivo": "bg-primary/20 text-primary border-primary/30",
     "agendado": "bg-[#00B4D4]/10 text-[#00B4D4] border-[#00B4D4]/20",
@@ -436,22 +443,23 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border ${map[status]}`}>
       {status === "ao vivo" && <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mr-1 animate-pulse" />}
-      {status}
+      {t(matchStatusKey(status))}
     </span>
   );
 }
 
 function ReservaStatusBadge({ status }: { status: Reserva["status"] }) {
+  const t = useT();
   const config = {
-    confirmada: { cls: "bg-primary/15 text-primary border-primary/25", icon: CheckCircle2, label: "Confirmada" },
-    pendente: { cls: "bg-[#ffd600]/10 text-[#00B4D4] border-[#ffd600]/20", icon: AlertCircle, label: "Pendente" },
-    cancelada: { cls: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle, label: "Cancelada" },
+    confirmada: { cls: "bg-primary/15 text-primary border-primary/25", icon: CheckCircle2 },
+    pendente: { cls: "bg-[#ffd600]/10 text-[#00B4D4] border-[#ffd600]/20", icon: AlertCircle },
+    cancelada: { cls: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle },
   }[status];
   const Icon = config.icon;
   return (
     <span className={`inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border ${config.cls}`}>
       <Icon className="w-3 h-3" />
-      {config.label}
+      {t(`status.${status}`)}
     </span>
   );
 }
@@ -459,13 +467,13 @@ function ReservaStatusBadge({ status }: { status: Reserva["status"] }) {
 // ─── Sidebar ───────────────────────────────────────────────────────────────
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard",           page: "dashboard" as Page },
-  { icon: Calendar,        label: "Reservas",            page: "reservas"  as Page },
-  { icon: Users,           label: "Jogadores e Equipes", page: "jogadores" as Page },
-  { icon: Trophy,          label: "Torneios",            page: "torneios"  as Page },
-  { icon: Star,            label: "Ratings",             page: "ratings"   as Page },
-  { icon: Activity,        label: "Relatórios",          page: null },
-  { icon: Settings,        label: "Configurações",       page: null },
+  { icon: LayoutDashboard, labelKey: "nav.dashboard", page: "dashboard" as Page },
+  { icon: Calendar,        labelKey: "nav.reservas",  page: "reservas"  as Page },
+  { icon: Users,           labelKey: "nav.jogadores", page: "jogadores" as Page },
+  { icon: Trophy,          labelKey: "nav.torneios",  page: "torneios"  as Page },
+  { icon: Star,            labelKey: "nav.ratings",   page: "ratings"   as Page },
+  { icon: Activity,        labelKey: "nav.relatorios", page: null },
+  { icon: Settings,        labelKey: "nav.config",    page: null },
 ];
 
 function Sidebar({ open, onClose, currentPage, onNavigate }: {
@@ -474,6 +482,7 @@ function Sidebar({ open, onClose, currentPage, onNavigate }: {
   currentPage: Page;
   onNavigate: (page: Page) => void;
 }) {
+  const t = useT();
   return (
     <>
       <AnimatePresence>
@@ -497,23 +506,19 @@ function Sidebar({ open, onClose, currentPage, onNavigate }: {
         `}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-sidebar-border">
-          <ImageWithFallback
-            src={logoImg}
-            alt="Planeta Bola Arena Soccer"
-            className="h-14 w-auto object-contain"
-          />
+          <Logo alt={t("brand.alt")} markClassName="h-12 w-12" />
           <button className="lg:hidden text-muted-foreground hover:text-foreground ml-2" onClick={onClose}>
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <nav className="flex-1 px-3 py-4 overflow-y-auto">
-          <p className="text-[10px] font-mono tracking-widest text-muted-foreground px-2 mb-3 uppercase">Menu</p>
+          <p className="text-[10px] font-mono tracking-widest text-muted-foreground px-2 mb-3 uppercase">{t("nav.menu")}</p>
           <ul className="space-y-0.5">
             {navItems.map((item) => {
               const active = item.page === currentPage;
               return (
-                <motion.li key={item.label} whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 400, damping: 30 }}>
+                <motion.li key={item.labelKey} whileHover={{ x: 2 }} transition={{ type: "spring", stiffness: 400, damping: 30 }}>
                   <button
                     onClick={() => {
                       if (item.page) { onNavigate(item.page); onClose(); }
@@ -529,7 +534,7 @@ function Sidebar({ open, onClose, currentPage, onNavigate }: {
                     `}
                   >
                     <item.icon className="w-4 h-4 flex-shrink-0" />
-                    <span>{item.label}</span>
+                    <span>{t(item.labelKey)}</span>
                     {active && <ChevronRight className="w-3.5 h-3.5 ml-auto text-primary" />}
                   </button>
                 </motion.li>
@@ -556,24 +561,35 @@ function Sidebar({ open, onClose, currentPage, onNavigate }: {
 
 // ─── Dashboard Page ────────────────────────────────────────────────────────
 
+function formatMatchDate(data: string, t: (key: string) => string) {
+  if (data.startsWith("Hoje")) return data.replace("Hoje", t("date.today"));
+  if (data.startsWith("Ontem")) return data.replace("Ontem", t("date.yesterday"));
+  return data;
+}
+
 function DashboardPage() {
+  const t = useT();
   const [activeChart, setActiveChart] = useState<"receita" | "reservas">("receita");
+  const chartData = useMemo(
+    () => revenueData.map((d) => ({ ...d, mes: t(d.mesKey) })),
+    [t],
+  );
 
   return (
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-primary" />
-          <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase">Visão Geral</p>
+          <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase">{t("dash.eyebrow")}</p>
         </div>
-        <h1 className="text-2xl font-display font-semibold text-foreground mt-1 tracking-tight">Dashboard</h1>
+        <h1 className="text-2xl font-display font-semibold text-foreground mt-1 tracking-tight">{t("dash.title")}</h1>
       </motion.div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statsCards.map((card, i) => (
           <motion.div
-            key={card.label}
+            key={card.labelKey}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.08 }}
@@ -581,7 +597,7 @@ function DashboardPage() {
             className="bg-card border border-border rounded-xl p-4 cursor-default"
           >
             <div className="flex items-start justify-between mb-3">
-              <p className="text-xs text-muted-foreground">{card.label}</p>
+              <p className="text-xs text-muted-foreground">{t(card.labelKey)}</p>
               <card.icon className={`w-4 h-4 ${card.color}`} />
             </div>
             <p className={`text-2xl font-display font-semibold ${card.color}`}>
@@ -595,7 +611,7 @@ function DashboardPage() {
               <span className={`text-xs font-mono ${card.trend > 0 ? "text-primary" : "text-destructive"}`}>
                 {card.trend > 0 ? "+" : ""}{card.trend}%
               </span>
-              <span className="text-xs text-muted-foreground">vs. mês ant.</span>
+              <span className="text-xs text-muted-foreground">{t("common.vsPrevMonth")}</span>
             </div>
           </motion.div>
         ))}
@@ -611,8 +627,8 @@ function DashboardPage() {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Desempenho Anual</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Jan – Dez 2024</p>
+              <h2 className="text-sm font-semibold text-foreground">{t("dash.yearly")}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("dash.yearlyRange")}</p>
             </div>
             <div className="flex gap-1">
               {(["receita", "reservas"] as const).map((tab) => (
@@ -623,7 +639,7 @@ function DashboardPage() {
                     activeChart === tab ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {tab === "receita" ? "Receita" : "Reservas"}
+                  {tab === "receita" ? t("dash.tab.revenue") : t("dash.tab.bookings")}
                 </button>
               ))}
             </div>
@@ -635,7 +651,7 @@ function DashboardPage() {
             return (
               <div className="w-full h-52">
                 <ResponsiveContainer key={activeChart} width="100%" height="100%">
-                  <AreaChart data={revenueData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor={color} stopOpacity={0.25} />
@@ -660,7 +676,7 @@ function DashboardPage() {
           transition={{ duration: 0.4, delay: 0.38 }}
           className="bg-card border border-border rounded-xl p-5"
         >
-          <h2 className="text-sm font-semibold text-foreground mb-4">Partidas Recentes</h2>
+          <h2 className="text-sm font-semibold text-foreground mb-4">{t("dash.recentMatches")}</h2>
           <ul className="space-y-3">
             {partidas.map((p, i) => (
               <motion.li
@@ -672,7 +688,7 @@ function DashboardPage() {
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <StatusBadge status={p.status} />
-                  <p className="text-[10px] font-mono text-muted-foreground">{p.data}</p>
+                  <p className="text-[10px] font-mono text-muted-foreground">{formatMatchDate(p.data, t)}</p>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-foreground font-medium truncate max-w-[70px]">{p.casa}</span>
@@ -693,16 +709,16 @@ function DashboardPage() {
         className="bg-card border border-border rounded-xl overflow-hidden"
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold text-foreground">Ranking de Jogadores</h2>
+          <h2 className="text-sm font-semibold text-foreground">{t("dash.playerRanking")}</h2>
           <button className="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors">
-            Ver todos <ChevronRight className="w-3.5 h-3.5" />
+            {t("common.seeAll")} <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                {["#", "Jogador", "Posição", "Time", "Jogos", "Gols", "Rating"].map((h) => (
+                {["#", t("dash.col.player"), t("dash.col.position"), t("dash.col.team"), t("dash.col.games"), t("dash.col.goals"), t("dash.col.rating")].map((h) => (
                   <th key={h} className="text-left text-xs font-mono text-muted-foreground px-5 py-3 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -729,7 +745,7 @@ function DashboardPage() {
                       <span className="font-medium text-foreground group-hover:text-primary transition-colors">{j.nome}</span>
                     </div>
                   </td>
-                  <td className="px-5 py-3.5 text-muted-foreground text-xs font-mono">{j.posicao}</td>
+                  <td className="px-5 py-3.5 text-muted-foreground text-xs font-mono">{t(positionKey(j.posicao))}</td>
                   <td className="px-5 py-3.5 text-muted-foreground text-xs">{j.time}</td>
                   <td className="px-5 py-3.5 font-mono text-foreground">{j.jogos}</td>
                   <td className="px-5 py-3.5 font-mono text-foreground">{j.gols}</td>
@@ -761,6 +777,7 @@ function DashboardPage() {
 const EMPTY_FORM = { nome: "", data: "", horario: "" };
 
 function ReservasPage() {
+  const t = useT();
   const [tab, setTab] = useState<"lista" | "nova">("lista");
   const [reservas, setReservas] = useState<Reserva[]>(reservasIniciais);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -772,9 +789,9 @@ function ReservasPage() {
 
   function validate() {
     const e: Partial<typeof EMPTY_FORM> = {};
-    if (!form.nome.trim()) e.nome = "Informe o nome";
-    if (!form.data) e.data = "Informe a data";
-    if (!form.horario) e.horario = "Informe o horário";
+    if (!form.nome.trim()) e.nome = t("res.err.name");
+    if (!form.data) e.data = t("res.err.date");
+    if (!form.horario) e.horario = t("res.err.time");
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -825,9 +842,9 @@ function ReservasPage() {
           <div>
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-primary" />
-              <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase">Gestão</p>
+              <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase">{t("res.eyebrow")}</p>
             </div>
-            <h1 className="text-2xl font-display font-semibold text-foreground mt-1 tracking-tight">Reservas</h1>
+            <h1 className="text-2xl font-display font-semibold text-foreground mt-1 tracking-tight">{t("res.title")}</h1>
           </div>
           <motion.button
             whileHover={{ scale: 1.03 }}
@@ -836,22 +853,22 @@ function ReservasPage() {
             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors hover:bg-primary/90"
           >
             <Plus className="w-4 h-4" />
-            Nova Reserva
+            {t("res.new")}
           </motion.button>
         </div>
       </motion.div>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-muted/50 p-1 rounded-xl w-fit">
-        {(["lista", "nova"] as const).map((t) => (
+        {(["lista", "nova"] as const).map((tabKey) => (
           <button
-            key={t}
-            onClick={() => { setTab(t); setSuccess(false); }}
+            key={tabKey}
+            onClick={() => { setTab(tabKey); setSuccess(false); }}
             className={`relative px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === t ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+              tab === tabKey ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {tab === t && (
+            {tab === tabKey && (
               <motion.span
                 layoutId="reservas-tab-indicator"
                 className="absolute inset-0 bg-card border border-border rounded-lg shadow-sm"
@@ -860,7 +877,7 @@ function ReservasPage() {
               />
             )}
             <span className="relative z-10 flex items-center gap-2">
-              {t === "lista" ? <><Calendar className="w-3.5 h-3.5" /> Reservas Feitas</> : <><Plus className="w-3.5 h-3.5" /> Nova Reserva</>}
+              {tabKey === "lista" ? <><Calendar className="w-3.5 h-3.5" /> {t("res.tab.list")}</> : <><Plus className="w-3.5 h-3.5" /> {t("res.tab.new")}</>}
             </span>
           </button>
         ))}
@@ -877,8 +894,8 @@ function ReservasPage() {
           >
             <div className="max-w-lg">
               <div className="bg-card border border-border rounded-xl p-6">
-                <h2 className="text-base font-semibold text-foreground mb-1">Criar Nova Reserva</h2>
-                <p className="text-xs text-muted-foreground mb-6">Preencha os dados para agendar uma nova reserva de quadra.</p>
+                <h2 className="text-base font-semibold text-foreground mb-1">{t("res.formTitle")}</h2>
+                <p className="text-xs text-muted-foreground mb-6">{t("res.formDesc")}</p>
 
                 <AnimatePresence>
                   {success && (
@@ -889,7 +906,7 @@ function ReservasPage() {
                       className="flex items-center gap-3 bg-primary/10 border border-primary/25 text-primary rounded-lg px-4 py-3 mb-5 text-sm"
                     >
                       <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                      Reserva criada com sucesso! Redirecionando...
+                      {t("res.success")}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -898,13 +915,13 @@ function ReservasPage() {
                   {/* Nome */}
                   <div>
                     <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">
-                      Nome do Responsável
+                      {t("res.name")}
                     </label>
                     <input
                       type="text"
                       value={form.nome}
                       onChange={(e) => { setForm((f) => ({ ...f, nome: e.target.value })); setErrors((er) => ({ ...er, nome: "" })); }}
-                      placeholder="Ex: Rafael Moura / Raça FC"
+                      placeholder={t("res.namePh")}
                       className={`w-full bg-input-background border rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary ${
                         errors.nome ? "border-destructive" : "border-border"
                       }`}
@@ -916,7 +933,7 @@ function ReservasPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">
-                        Data
+                        {t("res.date")}
                       </label>
                       <input
                         type="date"
@@ -932,7 +949,7 @@ function ReservasPage() {
 
                     <div>
                       <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">
-                        Horário
+                        {t("res.time")}
                       </label>
                       <div className="relative">
                         <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
@@ -943,7 +960,7 @@ function ReservasPage() {
                             errors.horario ? "border-destructive" : "border-border"
                           }`}
                         >
-                          <option value="">Selecione</option>
+                          <option value="">{t("res.select")}</option>
                           {["07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00"].map((h) => (
                             <option key={h} value={h}>{h}</option>
                           ))}
@@ -960,7 +977,7 @@ function ReservasPage() {
                       onClick={() => { setForm(EMPTY_FORM); setErrors({}); setTab("lista"); }}
                       className="flex-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 rounded-lg py-2.5 text-sm font-medium transition-colors"
                     >
-                      Cancelar
+                      {t("common.cancel")}
                     </button>
                     <motion.button
                       type="submit"
@@ -968,7 +985,7 @@ function ReservasPage() {
                       whileTap={{ scale: 0.98 }}
                       className="flex-1 bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-semibold hover:bg-primary/90 transition-colors"
                     >
-                      Confirmar Reserva
+                      {t("res.confirm")}
                     </motion.button>
                   </div>
                 </form>
@@ -999,7 +1016,7 @@ function ReservasPage() {
                       : "bg-transparent text-muted-foreground border-border hover:border-foreground/20 hover:text-foreground"
                   }`}
                 >
-                  {f === "todas" ? "Todas" : f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f === "todas" ? t("common.all") : t(`status.${f}`)}
                   <span className="opacity-70">({counts[f]})</span>
                 </button>
               ))}
@@ -1010,14 +1027,14 @@ function ReservasPage() {
               {filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                   <Calendar className="w-8 h-8 mb-3 opacity-40" />
-                  <p className="text-sm">Nenhuma reserva encontrada</p>
+                  <p className="text-sm">{t("res.empty")}</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border">
-                        {["#", "Nome", "Data", "Horário", "Status", ""].map((h, i) => (
+                        {["#", t("res.col.name"), t("res.col.date"), t("res.col.time"), t("res.col.status"), ""].map((h, i) => (
                           <th key={i} className="text-left text-xs font-mono text-muted-foreground px-5 py-3 uppercase tracking-wider">{h}</th>
                         ))}
                       </tr>
@@ -1088,6 +1105,8 @@ const POSICAO_ZONA: Record<string, { x: number; y: number }> = {
 };
 
 function TacticsField({ jogadores, cor }: { jogadores: { nome: string; posicao: string }[]; cor: string }) {
+  const t = useT();
+  const emptyLabel = t("jog.addPlayersEmpty");
   const W = 220;
   const H = 320;
   const PAD = 12;
@@ -1171,7 +1190,7 @@ function TacticsField({ jogadores, cor }: { jogadores: { nome: string; posicao: 
       {dots.length === 0 && (
         <text x={W / 2} y={H / 2 + 4} textAnchor="middle" fontSize="11"
           fill="rgba(255,255,255,0.2)" fontFamily="DM Mono, monospace">
-          Adicione jogadores
+          {emptyLabel}
         </text>
       )}
     </svg>
@@ -1186,6 +1205,7 @@ const EMPTY_JOGADOR = { nome: "", posicao: "Atacante" };
 const EMPTY_TIME = { nome: "", cor: CORES_TIME[0] };
 
 function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dispatch<React.SetStateAction<Time[]>> }) {
+  const t = useT();
   const [tab, setTab] = useState<"times" | "novo">("times");
   const [expandido, setExpandido] = useState<number | null>(timesIniciais[0].id);
 
@@ -1224,9 +1244,9 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
 
   function validateTime() {
     const e: typeof errosTime = {};
-    if (!formTime.nome.trim()) e.nome = "Informe o nome do time";
+    if (!formTime.nome.trim()) e.nome = t("jog.err.name");
     const validos = jogadoresNovoTime.filter((j) => j.nome.trim());
-    if (validos.length === 0) e.jogadores = "Adicione ao menos um jogador";
+    if (validos.length === 0) e.jogadores = t("jog.err.players");
     setErrosTime(e);
     return Object.keys(e).length === 0;
   }
@@ -1271,16 +1291,16 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
           <div>
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-primary" />
-              <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase">Gestão</p>
+              <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase">{t("jog.eyebrow")}</p>
             </div>
-            <h1 className="text-2xl font-display font-semibold text-foreground mt-1 tracking-tight">Jogadores</h1>
+            <h1 className="text-2xl font-display font-semibold text-foreground mt-1 tracking-tight">{t("jog.title")}</h1>
           </div>
           <motion.button
             whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
             onClick={() => setTab("novo")}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
           >
-            <Plus className="w-4 h-4" /> Novo Time
+            <Plus className="w-4 h-4" /> {t("jog.newTeam")}
           </motion.button>
         </div>
       </motion.div>
@@ -1288,16 +1308,16 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Times cadastrados", value: times.length, color: "text-primary" },
-          { label: "Total de jogadores", value: todosJogadores.length, color: "text-[#00B4D4]" },
-          { label: "Média de rating", value: todosJogadores.length ? (todosJogadores.reduce((s, j) => s + j.rating, 0) / todosJogadores.length).toFixed(1) : "—", color: "text-[#ffd600]" },
+          { labelKey: "jog.teamsCount", value: times.length, color: "text-primary" },
+          { labelKey: "jog.playersCount", value: todosJogadores.length, color: "text-[#00B4D4]" },
+          { labelKey: "jog.avgRating", value: todosJogadores.length ? (todosJogadores.reduce((s, j) => s + j.rating, 0) / todosJogadores.length).toFixed(1) : "—", color: "text-[#ffd600]" },
         ].map((s, i) => (
           <motion.div
-            key={s.label}
+            key={s.labelKey}
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
             className="bg-card border border-border rounded-xl px-5 py-4"
           >
-            <p className="text-xs text-muted-foreground mb-1">{s.label}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t(s.labelKey)}</p>
             <p className={`text-2xl font-display font-semibold ${s.color}`}>{s.value}</p>
           </motion.div>
         ))}
@@ -1305,13 +1325,13 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
 
       {/* Tabs */}
       <div className="flex gap-1 bg-muted/50 p-1 rounded-xl w-fit">
-        {(["times", "novo"] as const).map((t) => (
+        {(["times", "novo"] as const).map((tabKey) => (
           <button
-            key={t}
-            onClick={() => { setTab(t); setSucesso(false); }}
-            className={`relative px-5 py-2 rounded-lg text-sm font-medium transition-all ${tab === t ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            key={tabKey}
+            onClick={() => { setTab(tabKey); setSucesso(false); }}
+            className={`relative px-5 py-2 rounded-lg text-sm font-medium transition-all ${tab === tabKey ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
           >
-            {tab === t && (
+            {tab === tabKey && (
               <motion.span
                 layoutId="jogadores-tab"
                 className="absolute inset-0 bg-card border border-border rounded-lg shadow-sm"
@@ -1320,9 +1340,9 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
               />
             )}
             <span className="relative z-10 flex items-center gap-2">
-              {t === "times"
-                ? <><Shield className="w-3.5 h-3.5" /> Times &amp; Jogadores</>
-                : <><Plus className="w-3.5 h-3.5" /> Novo Time</>
+              {tabKey === "times"
+                ? <><Shield className="w-3.5 h-3.5" /> {t("jog.section")}</>
+                : <><Plus className="w-3.5 h-3.5" /> {t("jog.newTeam")}</>
               }
             </span>
           </button>
@@ -1335,8 +1355,8 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
             {times.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground bg-card border border-border rounded-xl">
                 <Shield className="w-10 h-10 mb-3 opacity-30" />
-                <p className="text-sm">Nenhum time cadastrado</p>
-                <button onClick={() => setTab("novo")} className="mt-3 text-xs text-primary hover:underline">Criar primeiro time</button>
+                <p className="text-sm">{t("jog.emptyTeams")}</p>
+                <button onClick={() => setTab("novo")} className="mt-3 text-xs text-primary hover:underline">{t("jog.createFirst")}</button>
               </div>
             ) : times.map((time, ti) => (
               <motion.div
@@ -1360,9 +1380,9 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                   <div className="flex-1 min-w-0">
                     <p className="font-display font-semibold text-foreground tracking-wide">{time.nome}</p>
                     <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                      {time.jogadores.length} jogador{time.jogadores.length !== 1 ? "es" : ""}
+                      {t("rat.players", { n: time.jogadores.length })}
                       {time.jogadores.length > 0 && (
-                        <> · média {(time.jogadores.reduce((s, j) => s + j.rating, 0) / time.jogadores.length).toFixed(1)}</>
+                        <> · {(time.jogadores.reduce((s, j) => s + j.rating, 0) / time.jogadores.length).toFixed(1)}</>
                       )}
                     </p>
                   </div>
@@ -1391,7 +1411,7 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                     >
                       <div className="border-t border-border">
                         {time.jogadores.length === 0 ? (
-                          <p className="text-xs text-muted-foreground px-5 py-4">Nenhum jogador neste time.</p>
+                          <p className="text-xs text-muted-foreground px-5 py-4">{t("jog.emptyPlayers")}</p>
                         ) : (
                           <div className="grid lg:grid-cols-4">
                             {/* Table col-span-3 */}
@@ -1399,7 +1419,7 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                               <table className="w-full text-sm">
                                 <thead>
                                   <tr className="border-b border-border/50">
-                                    {["Jogador", "Posição", "Jogos", "Gols", "Rating", ""].map((h, i) => (
+                                    {[t("dash.col.player"), t("dash.col.position"), t("dash.col.games"), t("dash.col.goals"), t("dash.col.rating"), ""].map((h, i) => (
                                       <th key={i} className="text-left text-[10px] font-mono text-muted-foreground px-5 py-2.5 uppercase tracking-wider">{h}</th>
                                     ))}
                                   </tr>
@@ -1420,7 +1440,7 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                                           <span className="font-medium text-foreground">{j.nome}</span>
                                         </div>
                                       </td>
-                                      <td className="px-5 py-3 text-xs font-mono text-muted-foreground">{j.posicao}</td>
+                                      <td className="px-5 py-3 text-xs font-mono text-muted-foreground">{t(positionKey(j.posicao))}</td>
                                       <td className="px-5 py-3 font-mono text-foreground text-xs">{j.jogos}</td>
                                       <td className="px-5 py-3 font-mono text-foreground text-xs">{j.gols}</td>
                                       <td className="px-5 py-3">
@@ -1466,7 +1486,7 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                   className="flex items-center gap-3 bg-primary/10 border border-primary/25 text-primary rounded-lg px-4 py-3 mb-4 text-sm"
                 >
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                  Time criado com sucesso! Redirecionando...
+                  {t("jog.success")}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1474,13 +1494,13 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
             <div className="grid lg:grid-cols-5 gap-5 items-start">
               {/* Form */}
               <div className="lg:col-span-3 bg-card border border-border rounded-xl p-6">
-                <h2 className="text-base font-semibold text-foreground mb-1">Criar Novo Time</h2>
-                <p className="text-xs text-muted-foreground mb-6">Defina o nome, cor, logo e adicione os jogadores.</p>
+                <h2 className="text-base font-semibold text-foreground mb-1">{t("jog.formTitle")}</h2>
+                <p className="text-xs text-muted-foreground mb-6">{t("jog.formDesc")}</p>
 
                 <form onSubmit={handleCriarTime} className="space-y-5">
                   {/* Logo upload */}
                   <div>
-                    <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Logo do Time</label>
+                    <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">{t("jog.logo")}</label>
                     <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                     <button
                       type="button"
@@ -1491,8 +1511,8 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                         <>
                           <img src={logoPreview} alt="Logo" className="w-14 h-14 object-contain rounded-lg bg-black/30 p-1 flex-shrink-0" />
                           <div className="text-left">
-                            <p className="text-sm font-medium text-foreground">Logo carregada</p>
-                            <p className="text-xs text-muted-foreground mt-0.5 group-hover:text-primary transition-colors">Clique para trocar</p>
+                            <p className="text-sm font-medium text-foreground">{t("jog.logoLoaded")}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 group-hover:text-primary transition-colors">{t("jog.logoChange")}</p>
                           </div>
                         </>
                       ) : (
@@ -1501,8 +1521,8 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                             <ImageIcon className="w-6 h-6 text-muted-foreground" />
                           </div>
                           <div className="text-left">
-                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5"><Upload className="w-3.5 h-3.5" /> Subir logo</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">PNG, JPG ou SVG · opcional</p>
+                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5"><Upload className="w-3.5 h-3.5" /> {t("jog.logoUpload")}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{t("jog.logoHint")}</p>
                           </div>
                         </>
                       )}
@@ -1512,7 +1532,7 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                   {/* Nome + Cor */}
                   <div className="grid grid-cols-3 gap-4">
                     <div className="col-span-2">
-                      <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Nome do Time</label>
+                      <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">{t("jog.teamName")}</label>
                       <input
                         type="text"
                         value={formTime.nome}
@@ -1523,7 +1543,7 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                       {errosTime.nome && <p className="text-xs text-destructive mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errosTime.nome}</p>}
                     </div>
                     <div>
-                      <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Cor do Time</label>
+                      <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">{t("jog.teamColor")}</label>
                       <div className="flex flex-wrap gap-2 pt-1">
                         {CORES_TIME.map((cor) => (
                           <button
@@ -1543,10 +1563,10 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                        Jogadores <span className="text-muted-foreground/50">({jogadoresNovoTime.filter(j => j.nome.trim()).length} adicionado{jogadoresNovoTime.filter(j => j.nome.trim()).length !== 1 ? "s" : ""})</span>
+                        {t("jog.players")} <span className="text-muted-foreground/50">({t("jog.added", { n: jogadoresNovoTime.filter(j => j.nome.trim()).length })})</span>
                       </label>
                       <button type="button" onClick={addJogadorForm} className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium transition-colors">
-                        <UserPlus className="w-3.5 h-3.5" /> Adicionar jogador
+                        <UserPlus className="w-3.5 h-3.5" /> {t("jog.addPlayer")}
                       </button>
                     </div>
                     {errosTime.jogadores && <p className="text-xs text-destructive mb-3 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errosTime.jogadores}</p>}
@@ -1565,7 +1585,7 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                                 type="text"
                                 value={j.nome}
                                 onChange={(e) => updateJogadorForm(i, "nome", e.target.value)}
-                                placeholder={`Jogador ${i + 1}`}
+                                placeholder={t("jog.playerPh", { n: i + 1 })}
                                 className="bg-input-background border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary transition-colors"
                               />
                               <select
@@ -1573,7 +1593,7 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                                 onChange={(e) => updateJogadorForm(i, "posicao", e.target.value)}
                                 className="bg-input-background border border-border rounded-lg px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary transition-colors cursor-pointer appearance-none"
                               >
-                                {POSICOES.map((p) => <option key={p} value={p}>{p}</option>)}
+                                {POSICOES.map((p) => <option key={p} value={p}>{t(positionKey(p))}</option>)}
                               </select>
                             </div>
                             {jogadoresNovoTime.length > 1 && (
@@ -1590,16 +1610,16 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                   {/* Preview */}
                   {jogadoresNovoTime.some(j => j.nome.trim()) && (
                     <div className="bg-muted/40 border border-border rounded-lg p-4">
-                      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-3">Preview do time</p>
+                      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-3">{t("jog.preview")}</p>
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: formTime.cor }} />
-                        <p className="font-display font-semibold text-foreground text-sm">{formTime.nome || "Sem nome"}</p>
+                        <p className="font-display font-semibold text-foreground text-sm">{formTime.nome || t("jog.noName")}</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {jogadoresNovoTime.filter(j => j.nome.trim()).map((j, i) => (
                           <span key={i} className="text-xs px-2.5 py-1 rounded-full border font-medium"
                             style={{ borderColor: `${formTime.cor}40`, color: formTime.cor, backgroundColor: `${formTime.cor}12` }}>
-                            {j.nome} · {j.posicao}
+                            {j.nome} · {t(positionKey(j.posicao))}
                           </span>
                         ))}
                       </div>
@@ -1613,13 +1633,13 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                       onClick={() => { setFormTime(EMPTY_TIME); setLogoPreview(null); setJogadoresNovoTime([{ ...EMPTY_JOGADOR }]); setErrosTime({}); setTab("times"); }}
                       className="flex-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 rounded-lg py-2.5 text-sm font-medium transition-colors"
                     >
-                      Cancelar
+                      {t("common.cancel")}
                     </button>
                     <motion.button
                       type="submit" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                       className="flex-1 bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-semibold hover:bg-primary/90 transition-colors"
                     >
-                      Criar Time
+                      {t("jog.create")}
                     </motion.button>
                   </div>
                 </form>
@@ -1635,14 +1655,14 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                       <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: formTime.cor }} />
                     )}
                     <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                      {formTime.nome || "Campo Tático"}
+                      {formTime.nome || t("jog.tactics")}
                     </p>
                   </div>
                   <TacticsField jogadores={jogadoresNovoTime} cor={formTime.cor} />
                 </div>
 
                 <div className="bg-card border border-border rounded-xl p-4">
-                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2.5">Posições no time</p>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2.5">{t("jog.positions")}</p>
                   <div className="space-y-1.5">
                     {POSICOES.map((pos) => {
                       const count = jogadoresNovoTime.filter(j => j.posicao === pos && j.nome.trim()).length;
@@ -1650,7 +1670,7 @@ function JogadoresPage({ times, setTimes }: { times: Time[]; setTimes: React.Dis
                         <div key={pos} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: count > 0 ? formTime.cor : "#2a2a2a" }} />
-                            <span className="text-xs text-muted-foreground">{pos}</span>
+                            <span className="text-xs text-muted-foreground">{t(positionKey(pos))}</span>
                           </div>
                           <span className="text-xs font-mono" style={{ color: count > 0 ? formTime.cor : "#444" }}>
                             {count > 0 ? count : "—"}
@@ -1688,6 +1708,7 @@ function calcStandings(grupo: GrupoT) {
 }
 
 function MatchCard({ p, cores }: { p: PartidaT; cores: Record<string, string> }) {
+  const t = useT();
   const done = p.golsA !== null && p.golsB !== null;
   const winA = done && p.golsA! > p.golsB!;
   const winB = done && p.golsB! > p.golsA!;
@@ -1697,17 +1718,17 @@ function MatchCard({ p, cores }: { p: PartidaT; cores: Record<string, string> })
     <div className="bg-background border border-border rounded-xl overflow-hidden w-44 flex-shrink-0">
       <div className={`flex items-center gap-2 px-3 py-2.5 ${winA ? "bg-primary/10" : ""}`}>
         <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cA }} />
-        <span className={`text-xs flex-1 truncate ${winA ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{p.timeA}</span>
+        <span className={`text-xs flex-1 truncate ${winA ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{p.timeA === "A definir" ? t("tor.tbd") : p.timeA}</span>
         {done && <span className={`text-sm font-display font-bold tabular-nums ${winA ? "text-primary" : "text-muted-foreground"}`}>{p.golsA}</span>}
       </div>
       <div className="border-t border-border/50" />
       <div className={`flex items-center gap-2 px-3 py-2.5 ${winB ? "bg-primary/10" : ""}`}>
         <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cB }} />
-        <span className={`text-xs flex-1 truncate ${winB ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{p.timeB}</span>
+        <span className={`text-xs flex-1 truncate ${winB ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{p.timeB === "A definir" ? t("tor.tbd") : p.timeB}</span>
         {done && <span className={`text-sm font-display font-bold tabular-nums ${winB ? "text-primary" : "text-muted-foreground"}`}>{p.golsB}</span>}
       </div>
       {!done && <div className="border-t border-border/50 px-3 py-1.5 text-center">
-        <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">A definir</span>
+        <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{t("tor.tbd")}</span>
       </div>}
     </div>
   );
@@ -1729,6 +1750,7 @@ function BracketView({ fases, cores }: { fases: FaseT[]; cores: Record<string, s
 }
 
 function GruposView({ grupos, cores }: { grupos: GrupoT[]; cores: Record<string, string> }) {
+  const t = useT();
   return (
     <div className="grid sm:grid-cols-2 gap-4">
       {grupos.map((g) => {
@@ -1736,13 +1758,13 @@ function GruposView({ grupos, cores }: { grupos: GrupoT[]; cores: Record<string,
         return (
           <div key={g.nome} className="bg-background border border-border rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-border">
-              <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Grupo {g.nome}</p>
+              <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">{t("tor.group", { n: g.nome })}</p>
             </div>
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border/50">
-                  {["Time","J","V","E","D","GP","GC","Pts"].map(h => (
-                    <th key={h} className={`py-2 font-mono text-muted-foreground uppercase tracking-wider ${h === "Time" ? "px-4 text-left" : "px-2 text-center"}`}>{h}</th>
+                  {[t("tor.standings.team"),"J","V","E","D","GP","GC",t("tor.standings.pts")].map(h => (
+                    <th key={h} className={`py-2 font-mono text-muted-foreground uppercase tracking-wider ${h === t("tor.standings.team") ? "px-4 text-left" : "px-2 text-center"}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -1753,7 +1775,7 @@ function GruposView({ grupos, cores }: { grupos: GrupoT[]; cores: Record<string,
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cores[r.nome] ?? "#666" }} />
                         <span className="font-medium text-foreground truncate max-w-[90px]">{r.nome}</span>
-                        {i === 0 && <span className="text-[9px] font-mono text-primary bg-primary/15 px-1 rounded">1º</span>}
+                        {i === 0 && <span className="text-[9px] font-mono text-primary bg-primary/15 px-1 rounded">{t("tor.first")}</span>}
                       </div>
                     </td>
                     {[r.j, r.v, r.e, r.d, r.gp, r.gc, r.pts].map((v, vi) => (
@@ -1773,6 +1795,9 @@ function GruposView({ grupos, cores }: { grupos: GrupoT[]; cores: Record<string,
 // ─── Torneios Page ─────────────────────────────────────────────────────────
 
 function TorneiosPage() {
+  const t = useT();
+  const { locale } = useLocale();
+  const dateLocale = locale === "en" ? "en-US" : "pt-BR";
   const [torneios, setTorneios] = useState<Torneio[]>(torneiosIniciais);
   const [tab, setTab] = useState<"lista" | "novo">("lista");
   const [detalhe, setDetalhe] = useState<Torneio | null>(null);
@@ -1796,8 +1821,8 @@ function TorneiosPage() {
 
   function handleCriarTorneio(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.nome.trim()) { setFormErro("Informe o nome do torneio"); return; }
-    if (form.timesSel.length < 2) { setFormErro("Selecione ao menos 2 times"); return; }
+    if (!form.nome.trim()) { setFormErro(t("tor.err.name")); return; }
+    if (form.timesSel.length < 2) { setFormErro(t("tor.err.teams")); return; }
     setFormErro("");
     const novo: Torneio = {
       id: Date.now(), nome: form.nome.trim(), formato: form.formato,
@@ -1867,9 +1892,9 @@ function TorneiosPage() {
   }
 
   const statusCfg = {
-    "aguardando":    { cls: "bg-[#ffd600]/10 text-[#ffd600] border-[#ffd600]/25", label: "Aguardando sorteio" },
-    "em-andamento":  { cls: "bg-[#00B4D4]/10 text-[#00B4D4] border-[#00B4D4]/25", label: "Em andamento" },
-    "encerrado":     { cls: "bg-primary/10 text-primary border-primary/25", label: "Encerrado" },
+    "aguardando":    { cls: "bg-[#ffd600]/10 text-[#ffd600] border-[#ffd600]/25", labelKey: "status.aguardando" },
+    "em-andamento":  { cls: "bg-[#00B4D4]/10 text-[#00B4D4] border-[#00B4D4]/25", labelKey: "status.emAndamento" },
+    "encerrado":     { cls: "bg-primary/10 text-primary border-primary/25", labelKey: "status.encerrado" },
   };
 
   // ── Detail view ────────────────────────────────────────────────────────
@@ -1895,24 +1920,24 @@ function TorneiosPage() {
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           <button onClick={() => { setDetalhe(null); setSorteioFase("idle"); setSorteioReveal(0); }}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4">
-            <ChevronLeft className="w-3.5 h-3.5" /> Todos os torneios
+            <ChevronLeft className="w-3.5 h-3.5" /> {t("tor.all")}
           </button>
           <div className="flex items-start justify-between flex-wrap gap-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-display font-semibold text-foreground tracking-tight">{T.nome}</h1>
-                <span className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border ${cfg.cls}`}>{cfg.label}</span>
+                <span className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border ${cfg.cls}`}>{t(cfg.labelKey)}</span>
                 <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider px-2 py-0.5 rounded border border-border">
-                  {T.formato === "grupos" ? "Chave de grupos" : "Mata-mata"}
+                  {T.formato === "grupos" ? t("tor.format.chave") : t("tor.format.mata")}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1 font-mono">{T.times.length} times · {new Date(T.data).toLocaleDateString("pt-BR")}</p>
+              <p className="text-xs text-muted-foreground mt-1 font-mono">{t("tor.teams", { n: T.times.length })} · {new Date(T.data).toLocaleDateString(dateLocale)}</p>
             </div>
             {T.campeao && (
               <div className="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-xl px-4 py-2.5">
                 <Crown className="w-4 h-4 text-primary" />
                 <div>
-                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Campeão</p>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{t("tor.champion")}</p>
                   <p className="text-sm font-display font-semibold text-primary">{T.campeao}</p>
                 </div>
               </div>
@@ -1926,7 +1951,7 @@ function TorneiosPage() {
             className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center gap-3 mb-4">
               <Shuffle className="w-5 h-5 text-primary" />
-              <h2 className="text-sm font-semibold text-foreground">Sorteio</h2>
+              <h2 className="text-sm font-semibold text-foreground">{t("tor.draw")}</h2>
             </div>
 
             {sorteioFase === "idle" && (
@@ -1944,7 +1969,7 @@ function TorneiosPage() {
                   onClick={() => iniciarSorteio(T)}
                   className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
                 >
-                  <Shuffle className="w-4 h-4" /> Realizar Sorteio
+                  <Shuffle className="w-4 h-4" /> {t("tor.doDraw")}
                 </motion.button>
               </div>
             )}
@@ -1954,8 +1979,8 @@ function TorneiosPage() {
                 <div className={`grid gap-4 ${T.formato === "grupos" ? `sm:grid-cols-${Math.min(sorteioData.length, 4)}` : "flex flex-wrap gap-4"}`}>
                   {sorteioData.map((slot, si) => {
                     const label = T.formato === "grupos"
-                      ? `Grupo ${String.fromCharCode(65 + si)}`
-                      : `Confronto ${si + 1}`;
+                      ? t("tor.group", { n: String.fromCharCode(65 + si) })
+                      : t("tor.matchup", { n: si + 1 });
                     return (
                       <div key={si} className="bg-background border border-border rounded-xl overflow-hidden min-w-[140px]">
                         <div className="px-3 py-2 border-b border-border/50">
@@ -1975,7 +2000,7 @@ function TorneiosPage() {
                                     className="flex items-center gap-2"
                                   >
                                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: T.cores[time] ?? "#666" }} />
-                                    <span className="text-xs font-medium text-foreground">{time}</span>
+                                    <span className="text-xs font-medium text-foreground">{time === "A definir" ? t("tor.tbd") : time}</span>
                                   </motion.div>
                                 ) : (
                                   <div className="h-5 bg-muted rounded animate-pulse" />
@@ -1991,7 +2016,7 @@ function TorneiosPage() {
                 {sorteioFase === "pronto" && (
                   <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
                     className="text-center text-sm text-primary font-medium mt-4">
-                    Sorteio concluído! O torneio está em andamento.
+                    {t("tor.drawDone")}
                   </motion.p>
                 )}
               </div>
@@ -2004,12 +2029,12 @@ function TorneiosPage() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
             className="bg-card border border-border rounded-xl p-5">
             <h2 className="text-sm font-semibold text-foreground mb-4">
-              {T.formato === "grupos" ? "Chave de Grupos" : "Chave"}
+              {T.formato === "grupos" ? t("tor.format.chave") : t("tor.bracket")}
             </h2>
             {T.formato === "grupos" && T.grupos && <GruposView grupos={T.grupos} cores={T.cores} />}
             {T.fases && T.fases.length > 0 && (
               <div className={T.formato === "grupos" ? "mt-5 pt-5 border-t border-border" : ""}>
-                {T.formato === "grupos" && <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-3">Fase final</p>}
+                {T.formato === "grupos" && <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-3">{t("tor.finalPhase")}</p>}
                 <BracketView fases={T.fases.filter(f => T.formato !== "grupos" || f.nome !== "Final" || T.formato === "grupos")} cores={T.cores} />
               </div>
             )}
@@ -2022,12 +2047,12 @@ function TorneiosPage() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="px-5 py-4 border-b border-border">
-              <h2 className="text-sm font-semibold text-foreground">Artilheiros</h2>
+              <h2 className="text-sm font-semibold text-foreground">{t("tor.scorers")}</h2>
             </div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  {["#", "Jogador", "Time", "Gols"].map((h, i) => (
+                  {["#", t("dash.col.player"), t("dash.col.team"), t("dash.col.goals")].map((h, i) => (
                     <th key={i} className="text-left text-xs font-mono text-muted-foreground px-5 py-3 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -2081,26 +2106,26 @@ function TorneiosPage() {
           <div>
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-primary" />
-              <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase">Competições</p>
+              <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase">{t("tor.eyebrow")}</p>
             </div>
-            <h1 className="text-2xl font-display font-semibold text-foreground mt-1 tracking-tight">Torneios</h1>
+            <h1 className="text-2xl font-display font-semibold text-foreground mt-1 tracking-tight">{t("tor.title")}</h1>
           </div>
           <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
             onClick={() => setTab("novo")}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors">
-            <Plus className="w-4 h-4" /> Novo Torneio
+            <Plus className="w-4 h-4" /> {t("tor.new")}
           </motion.button>
         </div>
       </motion.div>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-muted/50 p-1 rounded-xl w-fit">
-        {(["lista", "novo"] as const).map((t) => (
-          <button key={t} onClick={() => { setTab(t); setSucesso(false); }}
-            className={`relative px-5 py-2 rounded-lg text-sm font-medium transition-all ${tab === t ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            {tab === t && <motion.span layoutId="torneios-tab" className="absolute inset-0 bg-card border border-border rounded-lg shadow-sm" style={{ zIndex: 0 }} transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
+        {(["lista", "novo"] as const).map((tabKey) => (
+          <button key={tabKey} onClick={() => { setTab(tabKey); setSucesso(false); }}
+            className={`relative px-5 py-2 rounded-lg text-sm font-medium transition-all ${tab === tabKey ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            {tab === tabKey && <motion.span layoutId="torneios-tab" className="absolute inset-0 bg-card border border-border rounded-lg shadow-sm" style={{ zIndex: 0 }} transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
             <span className="relative z-10 flex items-center gap-2">
-              {t === "lista" ? <><Trophy className="w-3.5 h-3.5" /> Torneios</> : <><Plus className="w-3.5 h-3.5" /> Novo Torneio</>}
+              {tabKey === "lista" ? <><Trophy className="w-3.5 h-3.5" /> {t("tor.title")}</> : <><Plus className="w-3.5 h-3.5" /> {t("tor.new")}</>}
             </span>
           </button>
         ))}
@@ -2112,55 +2137,55 @@ function TorneiosPage() {
             {torneios.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 bg-card border border-border rounded-xl text-muted-foreground">
                 <Trophy className="w-10 h-10 mb-3 opacity-30" />
-                <p className="text-sm">Nenhum torneio criado</p>
+                <p className="text-sm">{t("tor.empty")}</p>
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {torneios.map((t, i) => {
-                  const cfg = statusCfg[t.status];
-                  const top = t.artilheiros[0];
+                {torneios.map((torneio, i) => {
+                  const cfg = statusCfg[torneio.status];
+                  const top = torneio.artilheiros[0];
                   return (
                     <motion.button
-                      key={t.id}
+                      key={torneio.id}
                       initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
                       whileHover={{ y: -3, transition: { type: "spring", stiffness: 400 } }}
-                      onClick={() => { setDetalhe(t); setSorteioFase("idle"); setSorteioReveal(0); }}
+                      onClick={() => { setDetalhe(torneio); setSorteioFase("idle"); setSorteioReveal(0); }}
                       className="bg-card border border-border rounded-xl p-5 text-left flex flex-col gap-3 hover:border-primary/30 transition-colors"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="font-display font-semibold text-foreground text-base leading-tight">{t.nome}</p>
-                          <p className="text-xs text-muted-foreground font-mono mt-0.5">{new Date(t.data).toLocaleDateString("pt-BR")}</p>
+                          <p className="font-display font-semibold text-foreground text-base leading-tight">{torneio.nome}</p>
+                          <p className="text-xs text-muted-foreground font-mono mt-0.5">{new Date(torneio.data).toLocaleDateString(dateLocale)}</p>
                         </div>
-                        <span className={`text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border flex-shrink-0 ${cfg.cls}`}>{cfg.label}</span>
+                        <span className={`text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border flex-shrink-0 ${cfg.cls}`}>{t(cfg.labelKey)}</span>
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-mono text-muted-foreground bg-muted px-2 py-1 rounded flex items-center gap-1">
-                          {t.formato === "grupos" ? <LayoutGrid className="w-3 h-3" /> : <Swords className="w-3 h-3" />}
-                          {t.formato === "grupos" ? "Grupos" : "Mata-mata"}
+                          {torneio.formato === "grupos" ? <LayoutGrid className="w-3 h-3" /> : <Swords className="w-3 h-3" />}
+                          {torneio.formato === "grupos" ? t("tor.format.grupos") : t("tor.format.mata")}
                         </span>
                         <span className="text-[10px] font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
-                          {t.times.length} times
+                          {t("tor.teams", { n: torneio.times.length })}
                         </span>
                       </div>
 
                       <div className="flex gap-1 flex-wrap">
-                        {t.times.map(nome => (
-                          <div key={nome} className="w-2 h-2 rounded-full" style={{ backgroundColor: t.cores[nome] ?? "#666" }} title={nome} />
+                        {torneio.times.map(nome => (
+                          <div key={nome} className="w-2 h-2 rounded-full" style={{ backgroundColor: torneio.cores[nome] ?? "#666" }} title={nome} />
                         ))}
                       </div>
 
-                      {t.campeao && (
+                      {torneio.campeao && (
                         <div className="flex items-center gap-2 border-t border-border/50 pt-3">
                           <Crown className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                          <span className="text-xs font-medium text-primary">{t.campeao}</span>
+                          <span className="text-xs font-medium text-primary">{torneio.campeao}</span>
                         </div>
                       )}
-                      {top && !t.campeao && (
+                      {top && !torneio.campeao && (
                         <div className="flex items-center gap-2 border-t border-border/50 pt-3">
                           <Star className="w-3 h-3 text-[#ffd600] flex-shrink-0" />
-                          <span className="text-xs text-muted-foreground">{top.nome} · <span className="text-foreground font-medium">{top.gols} gols</span></span>
+                          <span className="text-xs text-muted-foreground">{top.nome} · <span className="text-foreground font-medium">{t("tor.goals", { n: top.gols })}</span></span>
                         </div>
                       )}
 
@@ -2179,27 +2204,27 @@ function TorneiosPage() {
               {sucesso && (
                 <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                   className="flex items-center gap-3 bg-primary/10 border border-primary/25 text-primary rounded-lg px-4 py-3 mb-4 text-sm">
-                  <CheckCircle2 className="w-4 h-4" /> Torneio criado! Redirecionando...
+                  <CheckCircle2 className="w-4 h-4" /> {t("tor.success")}
                 </motion.div>
               )}
             </AnimatePresence>
 
             <div className="max-w-2xl bg-card border border-border rounded-xl p-6">
-              <h2 className="text-base font-semibold text-foreground mb-1">Criar Novo Torneio</h2>
-              <p className="text-xs text-muted-foreground mb-6">Configure o formato, selecione os times e inicie o sorteio.</p>
+              <h2 className="text-base font-semibold text-foreground mb-1">{t("tor.formTitle")}</h2>
+              <p className="text-xs text-muted-foreground mb-6">{t("tor.formDesc")}</p>
 
               <form onSubmit={handleCriarTorneio} className="space-y-6">
                 {/* Nome */}
                 <div>
-                  <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Nome do Torneio</label>
+                  <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">{t("tor.name")}</label>
                   <input type="text" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
-                    placeholder="Ex: Copa Inverno 2025"
+                    placeholder={t("tor.namePh")}
                     className="w-full bg-input-background border border-border rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
                 </div>
 
                 {/* Formato */}
                 <div>
-                  <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-3">Formato</label>
+                  <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-3">{t("tor.formatLabel")}</label>
                   <div className="grid grid-cols-2 gap-3">
                     {(["mata-mata", "grupos"] as const).map(fmt => (
                       <button key={fmt} type="button" onClick={() => setForm(f => ({ ...f, formato: fmt }))}
@@ -2208,13 +2233,13 @@ function TorneiosPage() {
                         <div className="mb-2">
                           {fmt === "mata-mata" ? <Swords className="w-5 h-5 text-primary" /> : <LayoutGrid className="w-5 h-5 text-primary" />}
                         </div>
-                        <p className="text-sm font-semibold text-foreground">{fmt === "mata-mata" ? "Mata-mata" : "Chave de Grupos"}</p>
+                        <p className="text-sm font-semibold text-foreground">{fmt === "mata-mata" ? t("tor.format.mata") : t("tor.format.chave")}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {fmt === "mata-mata" ? "Eliminação direta. Perdeu, saiu." : "Times disputam em grupos antes do mata-mata."}
+                          {fmt === "mata-mata" ? t("tor.mataDesc") : t("tor.gruposDesc")}
                         </p>
                         {fmt === "grupos" && form.formato === "grupos" && (
                           <div className="mt-3 flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">Nº de grupos:</span>
+                            <span className="text-xs text-muted-foreground">{t("tor.numGroups")}</span>
                             {[2, 3, 4].map(n => (
                               <button key={n} type="button" onClick={e => { e.stopPropagation(); setForm(f => ({ ...f, numGrupos: n })); }}
                                 className={`w-6 h-6 rounded text-xs font-mono transition-all ${form.numGrupos === n ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
@@ -2231,7 +2256,7 @@ function TorneiosPage() {
                 {/* Times */}
                 <div>
                   <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-3">
-                    Times Participantes <span className="text-muted-foreground/50">({form.timesSel.length} selecionado{form.timesSel.length !== 1 ? "s" : ""})</span>
+                    {t("tor.participants")} <span className="text-muted-foreground/50">({t("tor.selected", { n: form.timesSel.length })})</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {timesCadastrados.map(t => {
@@ -2254,11 +2279,11 @@ function TorneiosPage() {
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setTab("lista")}
                     className="flex-1 border border-border text-muted-foreground hover:text-foreground rounded-lg py-2.5 text-sm font-medium transition-colors">
-                    Cancelar
+                    {t("common.cancel")}
                   </button>
                   <motion.button type="submit" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                     className="flex-1 bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-semibold hover:bg-primary/90 transition-colors">
-                    Criar Torneio
+                    {t("tor.create")}
                   </motion.button>
                 </div>
               </form>
@@ -2309,12 +2334,13 @@ function AttrBar({ label, color, value, relevant }: { label: string; color: stri
 function AttrSlider({ label, color, value, onChange, relevant }: {
   label: string; color: string; value: number; onChange: (n: number) => void; relevant: boolean;
 }) {
+  const t = useT();
   return (
     <div className={`transition-opacity ${relevant ? "opacity-100" : "opacity-40"}`}>
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs font-medium" style={{ color: relevant ? color : "#555" }}>{label}</span>
         <div className="flex items-center gap-2">
-          {relevant && <span className="text-[9px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">conta</span>}
+          {relevant && <span className="text-[9px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{t("rat.counts")}</span>}
           <span className="text-sm font-display font-bold tabular-nums" style={{ color: relevant ? color : "#555" }}>{value}</span>
         </div>
       </div>
@@ -2329,6 +2355,7 @@ function PlayerRatingCard({ jogador, timeCor, avaliacoes }: {
   jogador: Jogador; timeCor: string; logo?: string;
   avaliacoes: AvaliacaoJogador[];
 }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(false);
   const isGK = jogador.posicao === "Goleiro";
 
@@ -2347,8 +2374,8 @@ function PlayerRatingCard({ jogador, timeCor, avaliacoes }: {
   const hasData = isGK ? !!avgGKAttrs : !!avgAttrs;
 
   const radarData = isGK && avgGKAttrs
-    ? ATRIBUTOS_GK.map(a => ({ attr: a.label.slice(0, 5), value: avgGKAttrs[a.key], fullMark: 10 }))
-    : ATRIBUTOS.map(a => ({ attr: a.label.slice(0, 3), value: attrs[a.key], fullMark: 10 }));
+    ? ATRIBUTOS_GK.map(a => ({ attr: t(a.labelKey).slice(0, 5), value: avgGKAttrs[a.key], fullMark: 10 }))
+    : ATRIBUTOS.map(a => ({ attr: t(a.labelKey).slice(0, 3), value: attrs[a.key], fullMark: 10 }));
 
   return (
     <motion.div layout className="bg-background border border-border rounded-xl overflow-hidden hover:border-border/80 transition-colors">
@@ -2365,7 +2392,7 @@ function PlayerRatingCard({ jogador, timeCor, avaliacoes }: {
                 style={{ borderColor: `${timeCor}40`, color: timeCor, backgroundColor: `${timeCor}12` }}>GK</span>
             )}
           </div>
-          <p className="text-[10px] font-mono text-muted-foreground">{jogador.posicao} · {cnt} avaliação{cnt !== 1 ? "ões" : ""}</p>
+          <p className="text-[10px] font-mono text-muted-foreground">{t(positionKey(jogador.posicao))} · {t("rat.countN", { n: cnt })}</p>
         </div>
         <div className="flex flex-col items-end gap-0.5 mr-2">
           <span className="font-display font-bold text-lg leading-none" style={{ color: timeCor }}>{rating.toFixed(1)}</span>
@@ -2384,7 +2411,7 @@ function PlayerRatingCard({ jogador, timeCor, avaliacoes }: {
               {isGK && (
                 <div className="flex items-center gap-1.5 mb-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#00B4D4]" />
-                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Atributos de goleiro</p>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{t("rat.gkAttrs")}</p>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
@@ -2399,22 +2426,22 @@ function PlayerRatingCard({ jogador, timeCor, avaliacoes }: {
                 <div className="space-y-1.5 justify-center flex flex-col">
                   {isGK
                     ? ATRIBUTOS_GK.map(a => (
-                        <AttrBar key={a.key} label={a.label} color={ATTR_COLORS_GK[a.key]}
+                        <AttrBar key={a.key} label={t(a.labelKey)} color={ATTR_COLORS_GK[a.key]}
                           value={(avgGKAttrs ?? DEFAULT_GK_ATTRS)[a.key]} relevant={true} />
                       ))
                     : ATRIBUTOS.map(a => (
-                        <AttrBar key={a.key} label={a.label} color={ATTR_COLORS[a.key]}
+                        <AttrBar key={a.key} label={t(a.labelKey)} color={ATTR_COLORS[a.key]}
                           value={attrs[a.key]} relevant={!!posicaoPesos[a.key]} />
                       ))
                   }
                   {isGK && (
-                    <AttrBar label="Físico" color={ATTR_COLORS.fisico} value={attrs.fisico} relevant={true} />
+                    <AttrBar label={t("attr.fisico")} color={ATTR_COLORS.fisico} value={attrs.fisico} relevant={true} />
                   )}
                 </div>
               </div>
             </div>
             {!hasData && (
-              <p className="px-4 pb-3 text-[10px] text-muted-foreground/60 font-mono">* Sem avaliações — usando dados base</p>
+              <p className="px-4 pb-3 text-[10px] text-muted-foreground/60 font-mono">* {t("rat.noRatings")}</p>
             )}
           </motion.div>
         )}
@@ -2426,6 +2453,7 @@ function PlayerRatingCard({ jogador, timeCor, avaliacoes }: {
 const DEFAULT_ATTRS: AtributosMap = { chute: 5, passe: 5, velocidade: 5, drible: 5, defesa: 5, fisico: 5 };
 
 function RatingsPage({ times }: { times: Time[] }) {
+  const t = useT();
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoJogador[]>(avaliacoesIniciais);
   const [tab, setTab] = useState<"times" | "avaliar">("times");
   const [expandido, setExpandido] = useState<number | null>(times[0]?.id ?? null);
@@ -2457,9 +2485,9 @@ function RatingsPage({ times }: { times: Time[] }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!avaliadorId) { setFormErro("Selecione quem você é"); return; }
-    if (!contexto.trim()) { setFormErro("Informe o contexto da partida"); return; }
-    if (colegas.length === 0) { setFormErro("Sem colegas para avaliar"); return; }
+    if (!avaliadorId) { setFormErro(t("rat.err.who")); return; }
+    if (!contexto.trim()) { setFormErro(t("rat.err.match")); return; }
+    if (colegas.length === 0) { setFormErro(t("rat.err.peers")); return; }
     setFormErro("");
     const novasAvaliacoes: AvaliacaoJogador[] = colegas.map((j, i) => ({
       id: Date.now() + i,
@@ -2489,26 +2517,26 @@ function RatingsPage({ times }: { times: Time[] }) {
           <div>
             <div className="flex items-center gap-2">
               <Star className="w-4 h-4 text-primary" />
-              <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase">Avaliação por pares · ponderada por posição</p>
+              <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase">{t("rat.eyebrow")}</p>
             </div>
-            <h1 className="text-2xl font-display font-semibold text-foreground mt-1 tracking-tight">Ratings</h1>
+            <h1 className="text-2xl font-display font-semibold text-foreground mt-1 tracking-tight">{t("rat.title")}</h1>
           </div>
           <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
             onClick={() => { setTab("avaliar"); setStep(1); }}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors">
-            <Star className="w-4 h-4" /> Avaliar Partida
+            <Star className="w-4 h-4" /> {t("rat.rateMatch")}
           </motion.button>
         </div>
       </motion.div>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-muted/50 p-1 rounded-xl w-fit">
-        {(["times", "avaliar"] as const).map(t => (
-          <button key={t} onClick={() => { setTab(t); setSucesso(false); if (t === "avaliar") setStep(1); }}
-            className={`relative px-5 py-2 rounded-lg text-sm font-medium transition-all ${tab === t ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            {tab === t && <motion.span layoutId="ratings-tab" className="absolute inset-0 bg-card border border-border rounded-lg shadow-sm" style={{ zIndex: 0 }} transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
+        {(["times", "avaliar"] as const).map(tabKey => (
+          <button key={tabKey} onClick={() => { setTab(tabKey); setSucesso(false); if (tabKey === "avaliar") setStep(1); }}
+            className={`relative px-5 py-2 rounded-lg text-sm font-medium transition-all ${tab === tabKey ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            {tab === tabKey && <motion.span layoutId="ratings-tab" className="absolute inset-0 bg-card border border-border rounded-lg shadow-sm" style={{ zIndex: 0 }} transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
             <span className="relative z-10 flex items-center gap-2">
-              {t === "times" ? <><Shield className="w-3.5 h-3.5" /> Por Time</> : <><Star className="w-3.5 h-3.5" /> Avaliar</>}
+              {tabKey === "times" ? <><Shield className="w-3.5 h-3.5" /> {t("rat.byTeam")}</> : <><Star className="w-3.5 h-3.5" /> {t("rat.rate")}</>}
             </span>
           </button>
         ))}
@@ -2536,7 +2564,7 @@ function RatingsPage({ times }: { times: Time[] }) {
                     }
                     <div className="flex-1 min-w-0">
                       <p className="font-display font-semibold text-foreground">{time.nome}</p>
-                      <p className="text-xs text-muted-foreground font-mono mt-0.5">{time.jogadores.length} jogadores</p>
+                      <p className="text-xs text-muted-foreground font-mono mt-0.5">{t("rat.players", { n: time.jogadores.length })}</p>
                     </div>
                     {time.jogadores.length > 0 && (() => {
                       const ratings = time.jogadores.map(j => {
@@ -2565,7 +2593,7 @@ function RatingsPage({ times }: { times: Time[] }) {
                             <PlayerRatingCard key={j.id} jogador={j} timeCor={time.cor} logo={time.logo} avaliacoes={avaliacoes} />
                           ))}
                           {time.jogadores.length === 0 && (
-                            <p className="text-xs text-muted-foreground col-span-2 py-4 text-center">Nenhum jogador cadastrado</p>
+                            <p className="text-xs text-muted-foreground col-span-2 py-4 text-center">{t("rat.noPlayers")}</p>
                           )}
                         </div>
                       </motion.div>
@@ -2579,11 +2607,11 @@ function RatingsPage({ times }: { times: Time[] }) {
             <div className="space-y-4">
               {/* Position weights legend */}
               <div className="bg-card border border-border rounded-xl p-4">
-                <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3">Peso por posição</p>
+                <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3">{t("rat.weight")}</p>
                 <div className="space-y-3">
                   {Object.entries(PESOS).map(([pos, pesos]) => (
                     <div key={pos}>
-                      <p className="text-xs font-medium text-foreground mb-1.5">{pos}</p>
+                      <p className="text-xs font-medium text-foreground mb-1.5">{t(positionKey(pos))}</p>
                       <div className="flex flex-wrap gap-1">
                         {ATRIBUTOS.map(a => {
                           const p = pesos[a.key] ?? 0;
@@ -2591,7 +2619,7 @@ function RatingsPage({ times }: { times: Time[] }) {
                           return (
                             <span key={a.key} className="text-[9px] font-mono px-1.5 py-0.5 rounded"
                               style={{ backgroundColor: `${ATTR_COLORS[a.key]}20`, color: ATTR_COLORS[a.key] }}>
-                              {a.label} ×{p}
+                              {t(a.labelKey)} ×{p}
                             </span>
                           );
                         })}
@@ -2603,9 +2631,9 @@ function RatingsPage({ times }: { times: Time[] }) {
 
               {/* Recent evaluations */}
               <div className="bg-card border border-border rounded-xl p-4">
-                <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3">Avaliações recentes</p>
+                <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3">{t("rat.recent")}</p>
                 {recentes.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">Nenhuma avaliação ainda</p>
+                  <p className="text-xs text-muted-foreground text-center py-4">{t("rat.none")}</p>
                 ) : (
                   <ul className="space-y-2.5">
                     {recentes.map(av => {
@@ -2637,7 +2665,7 @@ function RatingsPage({ times }: { times: Time[] }) {
               {sucesso && (
                 <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                   className="flex items-center gap-3 bg-primary/10 border border-primary/25 text-primary rounded-lg px-4 py-3 mb-4 text-sm">
-                  <CheckCircle2 className="w-4 h-4" /> Avaliações enviadas! Ratings atualizados.
+                  <CheckCircle2 className="w-4 h-4" /> {t("rat.success")}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -2654,7 +2682,7 @@ function RatingsPage({ times }: { times: Time[] }) {
                   </div>
                 ))}
                 <span className="ml-2 text-xs text-muted-foreground">
-                  {step === 1 ? "Identificação" : step === 2 ? "Partida" : "Avaliação"}
+                  {step === 1 ? t("rat.step.id") : step === 2 ? t("rat.step.match") : t("rat.step.rate")}
                 </span>
               </div>
 
@@ -2663,8 +2691,8 @@ function RatingsPage({ times }: { times: Time[] }) {
                   {step === 1 && (
                     <motion.div key="s1" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.2 }} className="space-y-4">
                       <div>
-                        <h2 className="text-base font-semibold text-foreground mb-1">Quem é você?</h2>
-                        <p className="text-xs text-muted-foreground mb-4">Selecione seu nome para começar a avaliação.</p>
+                        <h2 className="text-base font-semibold text-foreground mb-1">{t("rat.who")}</h2>
+                        <p className="text-xs text-muted-foreground mb-4">{t("rat.whoDesc")}</p>
                         <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                           {times.map(time => (
                             <div key={time.id}>
@@ -2683,7 +2711,7 @@ function RatingsPage({ times }: { times: Time[] }) {
                                       {j.nome.split(" ").map(n => n[0]).join("").slice(0, 2)}
                                     </div>
                                     {j.nome}
-                                    <span className="text-[10px] font-mono text-muted-foreground ml-auto">{j.posicao}</span>
+                                    <span className="text-[10px] font-mono text-muted-foreground ml-auto">{t(positionKey(j.posicao))}</span>
                                     {avaliadorId === j.id && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
                                   </button>
                                 ))}
@@ -2694,7 +2722,7 @@ function RatingsPage({ times }: { times: Time[] }) {
                       </div>
                       <button type="button" disabled={!avaliadorId} onClick={() => avaliadorId && setStep(2)}
                         className="w-full bg-primary disabled:opacity-40 text-primary-foreground rounded-lg py-2.5 text-sm font-semibold transition-colors hover:bg-primary/90">
-                        Continuar
+                        {t("common.continue")}
                       </button>
                     </motion.div>
                   )}
@@ -2702,24 +2730,24 @@ function RatingsPage({ times }: { times: Time[] }) {
                   {step === 2 && (
                     <motion.div key="s2" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.2 }} className="space-y-4">
                       <div>
-                        <h2 className="text-base font-semibold text-foreground mb-1">Após qual partida?</h2>
+                        <h2 className="text-base font-semibold text-foreground mb-1">{t("rat.after")}</h2>
                         <p className="text-xs text-muted-foreground mb-4">
                           Avaliando como <span className="text-foreground font-medium">{avaliador?.nome}</span> — {timeDo?.nome}
                         </p>
-                        <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Descrição da partida</label>
+                        <label className="block text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">{t("rat.matchDesc")}</label>
                         <input type="text" value={contexto} onChange={e => setContexto(e.target.value)}
-                          placeholder="Ex: Copa Verão 2025 – Semifinal"
+                          placeholder={t("rat.matchPh")}
                           className="w-full bg-input-background border border-border rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary transition-colors" />
                       </div>
                       <div className="flex gap-3">
                         <button type="button" onClick={() => setStep(1)}
                           className="flex-1 border border-border text-muted-foreground hover:text-foreground rounded-lg py-2.5 text-sm font-medium transition-colors">
-                          Voltar
+                          {t("common.back")}
                         </button>
                         <button type="button" disabled={!contexto.trim()}
                           onClick={() => { if (contexto.trim()) { initNotas(); setStep(3); } }}
                           className="flex-1 bg-primary disabled:opacity-40 text-primary-foreground rounded-lg py-2.5 text-sm font-semibold transition-colors hover:bg-primary/90">
-                          Continuar
+                          {t("common.continue")}
                         </button>
                       </div>
                     </motion.div>
@@ -2728,9 +2756,9 @@ function RatingsPage({ times }: { times: Time[] }) {
                   {step === 3 && (
                     <motion.div key="s3" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.2 }} className="space-y-6">
                       <div>
-                        <h2 className="text-base font-semibold text-foreground mb-1">Avalie atributo por atributo</h2>
+                        <h2 className="text-base font-semibold text-foreground mb-1">{t("rat.rateAttrs")}</h2>
                         <p className="text-xs text-muted-foreground mb-5">
-                          Atributos marcados como <span className="text-primary font-medium">conta</span> são ponderados pela posição. Goleiros têm seção própria.
+                          {t("rat.attrsHint")}
                         </p>
                         <div className="space-y-6">
                           {colegas.map((j, ji) => {
@@ -2759,10 +2787,10 @@ function RatingsPage({ times }: { times: Time[] }) {
                                           style={{ borderColor: `${cor}40`, color: cor, backgroundColor: `${cor}12` }}>GK</span>
                                       )}
                                     </div>
-                                    <p className="text-[10px] font-mono text-muted-foreground">{j.posicao}</p>
+                                    <p className="text-[10px] font-mono text-muted-foreground">{t(positionKey(j.posicao))}</p>
                                   </div>
                                   <div className="text-right">
-                                    <p className="text-[10px] font-mono text-muted-foreground">prévia</p>
+                                    <p className="text-[10px] font-mono text-muted-foreground">{t("rat.preview")}</p>
                                     <span className="font-display font-bold text-xl leading-none" style={{ color: cor }}>{previewRating.toFixed(1)}</span>
                                   </div>
                                 </div>
@@ -2772,18 +2800,18 @@ function RatingsPage({ times }: { times: Time[] }) {
                                   <div className="px-4 pt-3 pb-2">
                                     <p className="text-[10px] font-mono text-[#00B4D4] uppercase tracking-wider mb-3 flex items-center gap-1.5">
                                       <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00B4D4]" />
-                                      Atributos de Goleiro
+                                      {t("rat.gkAttrs")}
                                     </p>
                                     <div className="space-y-3">
                                       {ATRIBUTOS_GK.map(a => (
-                                        <AttrSlider key={a.key} label={a.label} color={ATTR_COLORS_GK[a.key]}
+                                        <AttrSlider key={a.key} label={t(a.labelKey)} color={ATTR_COLORS_GK[a.key]}
                                           value={jNotasGK[a.key]} relevant={true}
                                           onChange={v => setNotasGK(prev => ({ ...prev, [j.id]: { ...(prev[j.id] ?? DEFAULT_GK_ATTRS), [a.key]: v } }))} />
                                       ))}
                                     </div>
                                     <div className="border-t border-border/50 mt-3 pt-3">
-                                      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Físico (geral)</p>
-                                      <AttrSlider label="Físico" color={ATTR_COLORS.fisico} value={jNotas.fisico} relevant={true}
+                                      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">{t("rat.physic")}</p>
+                                      <AttrSlider label={t("attr.fisico")} color={ATTR_COLORS.fisico} value={jNotas.fisico} relevant={true}
                                         onChange={v => setNotas(prev => ({ ...prev, [j.id]: { ...(prev[j.id] ?? DEFAULT_ATTRS), fisico: v } }))} />
                                     </div>
                                   </div>
@@ -2793,7 +2821,7 @@ function RatingsPage({ times }: { times: Time[] }) {
                                 {!isGK && (
                                   <div className="px-4 py-3 space-y-3">
                                     {ATRIBUTOS.map(a => (
-                                      <AttrSlider key={a.key} label={a.label} color={ATTR_COLORS[a.key]} value={jNotas[a.key]}
+                                      <AttrSlider key={a.key} label={t(a.labelKey)} color={ATTR_COLORS[a.key]} value={jNotas[a.key]}
                                         onChange={v => setNotas(prev => ({ ...prev, [j.id]: { ...(prev[j.id] ?? DEFAULT_ATTRS), [a.key]: v } }))}
                                         relevant={!!(posicaoPesos[a.key] ?? 0)} />
                                     ))}
@@ -2808,11 +2836,11 @@ function RatingsPage({ times }: { times: Time[] }) {
                       <div className="flex gap-3">
                         <button type="button" onClick={() => setStep(2)}
                           className="flex-1 border border-border text-muted-foreground hover:text-foreground rounded-lg py-2.5 text-sm font-medium transition-colors">
-                          Voltar
+                          {t("common.back")}
                         </button>
                         <motion.button type="submit" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                           className="flex-1 bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-semibold hover:bg-primary/90 transition-colors">
-                          Enviar Avaliações
+                          {t("rat.submit")}
                         </motion.button>
                       </div>
                     </motion.div>
@@ -2830,6 +2858,7 @@ function RatingsPage({ times }: { times: Time[] }) {
 // ─── App ───────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const { t, toggleLocale, locale } = useLocale();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const [times, setTimes] = useState<Time[]>(timesIniciais);
@@ -2849,17 +2878,29 @@ export default function App() {
           <button className="lg:hidden text-muted-foreground hover:text-foreground" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </button>
+          <Logo alt={t("brand.alt")} markClassName="h-8 w-8" className="lg:hidden" />
           <div className="flex-1 flex items-center gap-3 max-w-sm">
             <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2 w-full">
               <Search className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
               <input
                 type="text"
-                placeholder="Buscar jogador, reserva..."
+                placeholder={t("nav.search")}
                 className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full"
               />
             </div>
           </div>
           <div className="flex items-center gap-2 ml-auto">
+            <button
+              type="button"
+              onClick={toggleLocale}
+              aria-label={t("nav.lang.aria")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2.5 py-1.5 text-xs font-mono tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <Languages className="w-3.5 h-3.5" />
+              <span>{t("nav.lang")}</span>
+              <span className="text-muted-foreground/40">|</span>
+              <span className="text-primary font-semibold">{locale.toUpperCase()}</span>
+            </button>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
